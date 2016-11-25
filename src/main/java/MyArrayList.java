@@ -314,6 +314,18 @@ public class MyArrayList<T> implements List<T>{
     }
 
     @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder("[");
+        if (!isEmpty()) {
+            for (int i = 0; i < size - 1; i++) {
+                sb.append(arrayList[i]).append(", ");
+            }
+            sb.append(arrayList[size - 1]);
+        }
+        return sb.append("]").toString();
+    }
+
+    @Override
     public Object[] toArray(Object[] a) {
         T[] trimmedArr = (T[]) new Object[size];
         System.arraycopy(arrayList, 0, trimmedArr, 0, size);
