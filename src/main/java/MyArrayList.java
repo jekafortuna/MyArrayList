@@ -42,6 +42,9 @@ public class MyArrayList<T> implements List<T>{
 
         if (minCapacity > newCapacity) {
             newCapacity = (newCapacity * 3) / 2 + 1;
+            if (newCapacity < minCapacity){
+                newCapacity = minCapacity;
+            }
             T[] arrayNew = (T[]) new Object[newCapacity];
             System.arraycopy(arrayList, 0, arrayNew, 0, arrayList.length);
             arrayList = arrayNew;
@@ -77,13 +80,21 @@ public class MyArrayList<T> implements List<T>{
     }
 
     @Override
-    public Object[] toArray() {
-        return new Object[0];
+    public T[] toArray() {
+        Object[] result = new Object[size];
+        System.arraycopy(arrayList, 0, result, 0, size);
+        return (T[]) result;
     }
 
 //    @Override
-//    public <T1> T1[] toArray(T1[] a) {
-//        return null;
+//    public <E> E[] toArray(E[] destinationArray) {
+//        Objects.requireNonNull(destinationArray);
+//        if (destinationArray.length < size) {
+//            throw new IllegalArgumentException(
+//                    String.format(DESTINATION_ARRAY_UNSUFFICIENT_CAPACITY, size, array.length));
+//        }
+//        System.arraycopy(array, 0, destinationArray, 0, size);
+//        return destinationArray;
 //    }
 
     @Override
@@ -91,7 +102,7 @@ public class MyArrayList<T> implements List<T>{
         ensureCapacity(size + 1);
         arrayList[size++] = (T) element;
         modCount++;
-        return false;
+        return true;
     }
 
     @Override
@@ -107,8 +118,9 @@ public class MyArrayList<T> implements List<T>{
     }
 
     @Override
-    public boolean containsAll(Collection<?> c) {
-        Iterator iterator = c.iterator();
+    public boolean containsAll(Collection<?> collection) {
+        Objects.requireNonNull(collection);
+        Iterator iterator = collection.iterator();
         while (iterator.hasNext()){
             if (!contains(iterator.next())){
                 return false;
@@ -118,21 +130,18 @@ public class MyArrayList<T> implements List<T>{
     }
 
     @Override
-    public boolean addAll(Collection<? extends T> c) {
-        boolean isModified = false;
-        Iterator iterator = c.iterator();
-        while (iterator.hasNext()){
-            add((T) iterator.next());
-            isModified = true;
-        }
-        return isModified;
+    public boolean addAll(Collection<? extends T> collection) {
+        int quantityToAdd = collection.size();
+        ensureCapacity(size + quantityToAdd);
+        collection.forEach(element -> arrayList[size++] = element);
+        return true;
     }
 
     @Override
-    public boolean addAll(int index, Collection<? extends T> c) {
+    public boolean addAll(int index, Collection<? extends T> collection) {
         checkIndex(index);
         boolean isModified = false;
-        Iterator iterator = c.iterator();
+        Iterator iterator = collection.iterator();
         while (iterator.hasNext()) {
             add(index++, (T)iterator.next());
             isModified = true;
@@ -141,30 +150,28 @@ public class MyArrayList<T> implements List<T>{
     }
 
     @Override
-    public boolean removeAll(Collection<?> c) {
+    public boolean removeAll(Collection<?> collection) {
         boolean isRemoved = false;
-        Iterator iterator = c.iterator();
+        Iterator iterator = collection.iterator();
         while (iterator.hasNext()) {
-            Object elem = iterator.next();
-            if (contains(elem)) {
-                remove(elem);
-                isRemoved = true;
+            if (collection.contains(iterator.next())) {
+                iterator.remove();
             }
         }
-        return isRemoved;
+        return true;
     }
 
     @Override
-    public boolean retainAll(Collection<?> c) {
-        boolean isModified = false;
-        Iterator iterator = MyArrayList.this.iterator();
+    public boolean retainAll(Collection<?> collection) {
+        modCount++;
+        int oldSize = size;
+        Iterator iterator = this.iterator();
         while (iterator.hasNext()) {
-            if (!c.contains(iterator.next())) {
+            if (!collection.contains(iterator.next())) {
                 iterator.remove();
-                isModified = true;
             }
         }
-        return isModified;
+        return size != oldSize;
     }
 
     @Override
@@ -240,49 +247,64 @@ public class MyArrayList<T> implements List<T>{
     @Override
     public ListIterator<T> listIterator() {
         return new ListIterator<T>() {
+            int index = 0;
+            int modCount = MyArrayList.this.modCount;
+
             @Override
             public boolean hasNext() {
+                if (index < size - 1) {
+                    return true;
+                }
                 return false;
             }
 
             @Override
             public T next() {
-                return null;
+                return (T)arrayList[index++];
             }
 
             @Override
             public boolean hasPrevious() {
-                return false;
+                return index > 0;
             }
 
             @Override
             public T previous() {
-                return null;
+                return (T)arrayList[--index];
             }
 
             @Override
             public int nextIndex() {
-                return 0;
+                return index + 1;
             }
 
             @Override
             public int previousIndex() {
-                return 0;
+                return index - 1;
             }
 
             @Override
             public void remove() {
-
+                MyArrayList.this.remove(index--);
+                modCount++;
             }
 
             @Override
             public void set(T t) {
-
+                MyArrayList.this.set(index, t);
+                modCount++;
             }
 
             @Override
             public void add(T t) {
+                MyArrayList.this.add(index, t);
+                modCount++;
+            }
 
+            private void checkMods() {
+                if (modCount != MyArrayList.this.modCount) {
+                    throw new ConcurrentModificationException();
+                }
             }
         };
     }
